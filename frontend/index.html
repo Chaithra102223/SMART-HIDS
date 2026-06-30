@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Smart HIDS — Live Monitoring</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════
+   ROOT — LIGHT COLOUR THEME
+═══════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#f0f4ff;
+  --bg2:#e8eeff;
+  --panel:#ffffff;
+  --panel2:#f5f7ff;
+  --border:#d0d9ff;
+  --bgl:#4361ee;
+  --accent:#4361ee;
+  --accent2:#3a0ca3;
+  --green:#06d6a0;
+  --red:#ef233c;
+  --orange:#fb8500;
+  --yellow:#f4a261;
+  --purple:#7209b7;
+  --text:#1a1a2e;
+  --text2:#444466;
+  --text3:#888899;
+  --white:#ffffff;
+  --shadow:0 4px 20px rgba(67,97,238,0.1);
+  --shadow2:0 2px 8px rgba(67,97,238,0.06);
+  --fm:'Share Tech Mono',monospace;
+  --ft:'Orbitron',sans-serif;
+  --fb:'Rajdhani',sans-serif;
+}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--fb);overflow-x:hidden;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 5% 5%,rgba(67,97,238,0.07) 0%,transparent 55%),
+    radial-gradient(ellipse 60% 60% at 95% 95%,rgba(114,9,183,0.06) 0%,transparent 55%);
+  background-attachment:fixed;
+}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:#e8eeff;}
+::-webkit-scrollbar-thumb{background:#b0bfff;border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:#4361ee;}
+
+/* ═══════════════════════════════════════════
+   BOOT SCREEN
+═══════════════════════════════════════════ */
+#boot{
+  position:fixed;inset:0;z-index:99999;
+  background:linear-gradient(135deg,#0d0d2b,#1a1a4e);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;
+}
+.bt{font-family:var(--fm);font-size:11px;color:#00d4ff;letter-spacing:2px;}
+.bb{width:300px;height:3px;background:#111;border-radius:2px;overflow:hidden;}
+.bbf{height:100%;background:linear-gradient(90deg,#4361ee,#7209b7);width:0%;transition:width .12s;}
+.bl2{font-family:var(--fm);font-size:9px;color:#00aa44;height:55px;overflow:hidden;width:380px;}
+
+/* ═══════════════════════════════════════════
+   LOGIN PAGE
+═══════════════════════════════════════════ */
+#login-page{
+  position:fixed;inset:0;z-index:9999;
+  background:radial-gradient(ellipse 80% 60% at 20% 20%,rgba(67,97,238,0.12) 0%,transparent 60%),
+             radial-gradient(ellipse 70% 80% at 80% 80%,rgba(114,9,183,0.09) 0%,transparent 60%),
+             #f0f4ff;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+#login-canvas{position:absolute;inset:0;z-index:0;opacity:0.18;}
+/* animated floating blobs */
+.blob{position:absolute;border-radius:50%;filter:blur(70px);z-index:0;animation:blobF 7s ease-in-out infinite alternate;}
+.blob1{width:350px;height:350px;background:rgba(67,97,238,0.12);top:-80px;left:-80px;}
+.blob2{width:280px;height:280px;background:rgba(114,9,183,0.1);bottom:-60px;right:-60px;animation-delay:2s;}
+.blob3{width:200px;height:200px;background:rgba(6,214,160,0.08);top:40%;left:60%;animation-delay:4s;}
+@keyframes blobF{0%{transform:translate(0,0) scale(1)}100%{transform:translate(25px,18px) scale(1.12)}}
+
+.lbox{
+  position:relative;z-index:2;width:450px;max-height:92vh;overflow-y:auto;
+  background:rgba(255,255,255,0.93);
+  border:1.5px solid rgba(67,97,238,0.2);
+  border-radius:24px;padding:36px 32px;
+  box-shadow:0 24px 64px rgba(67,97,238,0.14),0 4px 16px rgba(67,97,238,0.08);
+  backdrop-filter:blur(24px);
+}
+.lbox::before{
+  content:'';position:absolute;inset:-1px;border-radius:24px;z-index:-1;
+  background:linear-gradient(135deg,rgba(67,97,238,0.06),rgba(114,9,183,0.04),transparent);
+  animation:lbGlow 3s ease-in-out infinite alternate;
+}
+@keyframes lbGlow{0%{opacity:.5}100%{opacity:1}}
+
+/* brand */
+.lbrand{text-align:center;margin-bottom:22px;}
+.lshield{font-size:52px;display:block;filter:drop-shadow(0 4px 14px rgba(67,97,238,0.4));animation:shieldPulse 2.5s ease-in-out infinite;}
+@keyframes shieldPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07);filter:drop-shadow(0 6px 22px rgba(67,97,238,0.55))}}
+.ltitle{font-family:var(--ft);font-size:24px;font-weight:900;color:var(--accent);letter-spacing:4px;text-shadow:0 2px 12px rgba(67,97,238,0.25);}
+.lsub{font-family:var(--fm);font-size:9px;color:var(--text3);letter-spacing:2px;margin-top:4px;text-transform:uppercase;}
+
+/* auth tabs */
+.atabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#eef0ff;border-radius:12px;padding:4px;margin-bottom:22px;border:1px solid var(--border);}
+.atab{padding:10px;border-radius:9px;border:none;background:transparent;cursor:pointer;font-family:var(--fb);font-size:13px;font-weight:700;color:var(--text3);transition:all .25s;letter-spacing:.5px;}
+.atab.active{background:var(--white);color:var(--accent);box-shadow:0 2px 8px rgba(67,97,238,0.14);}
+
+/* forms */
+.aform{display:none;}
+.aform.show{display:block;}
+
+/* input */
+.inp-g{margin-bottom:12px;}
+.inp-lbl{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.5px;display:block;margin-bottom:5px;text-transform:uppercase;}
+.inp-wrap{position:relative;}
+.inp-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.45;}
+.inp{
+  width:100%;background:#f5f7ff;
+  border:1.5px solid var(--border);border-radius:11px;
+  padding:11px 14px 11px 40px;
+  font-family:var(--fb);font-size:14px;color:var(--text);
+  outline:none;transition:all .25s;
+}
+.inp:focus{border-color:var(--accent);background:var(--white);box-shadow:0 0 0 3px rgba(67,97,238,0.1);}
+.inp::placeholder{color:var(--text3);}
+.inp.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,35,60,0.1);}
+.inp.ok{border-color:var(--green);box-shadow:0 0 0 3px rgba(6,214,160,0.1);}
+
+/* strength bar */
+.str-wrap{margin:4px 0 10px;}
+.str-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px;}
+.str-bar{height:4px;background:#e0e4ff;border-radius:2px;overflow:hidden;}
+.str-fill{height:100%;width:0%;border-radius:2px;transition:all .3s;}
+
+/* role pills */
+.role-row{display:flex;gap:8px;margin-bottom:14px;}
+.rpill{
+  flex:1;padding:9px 4px;border-radius:10px;
+  border:1.5px solid var(--border);background:#f5f7ff;
+  cursor:pointer;text-align:center;transition:all .2s;font-family:var(--fb);
+}
+.rpill:hover{border-color:var(--accent);}
+.rpill.sel{border-color:var(--accent);background:rgba(67,97,238,0.07);box-shadow:0 0 0 3px rgba(67,97,238,0.1);}
+.rpill-ico{font-size:20px;display:block;margin-bottom:3px;}
+.rpill-lbl{font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.5px;}
+
+/* alert boxes */
+.abox{padding:9px 12px;border-radius:9px;font-size:12px;font-weight:600;display:none;margin-bottom:12px;align-items:center;gap:8px;}
+.abox.show{display:flex;}
+.abox.err{background:rgba(239,35,60,0.07);border:1px solid rgba(239,35,60,0.2);color:var(--red);}
+.abox.succ{background:rgba(6,214,160,0.07);border:1px solid rgba(6,214,160,0.2);color:#059669;}
+
+/* submit btn */
+.lbtn{
+  width:100%;padding:13px;border:none;border-radius:12px;
+  color:#fff;font-family:var(--ft);font-size:13px;font-weight:700;
+  cursor:pointer;position:relative;overflow:hidden;
+  letter-spacing:1px;transition:all .3s;
+  background:linear-gradient(135deg,#4361ee,#7209b7);
+  box-shadow:0 4px 18px rgba(67,97,238,0.35);
+  margin-top:4px;
+}
+.lbtn::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);transform:translateX(-100%);transition:.5s;}
+.lbtn:hover::before{transform:translateX(100%);}
+.lbtn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(67,97,238,0.45);}
+.lbtn.reg-btn{background:linear-gradient(135deg,#06d6a0,#4361ee);box-shadow:0 4px 18px rgba(6,214,160,0.3);}
+
+/* spinner */
+.spin-wrap{display:none;text-align:center;margin-top:10px;font-size:11px;color:var(--text3);}
+.spin-wrap.show{display:flex;align-items:center;justify-content:center;gap:8px;}
+.spinner{width:14px;height:14px;border:2px solid #d0d9ff;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* online + stats */
+.lonline{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:14px;font-family:var(--fm);font-size:9px;color:var(--text3);letter-spacing:1px;}
+.lonl-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:onlp 2s ease-in-out infinite;}
+@keyframes onlp{0%,100%{opacity:1}50%{opacity:.3}}
+.mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;}
+.mini-sc{background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;}
+.mini-sv{font-family:var(--ft);font-size:18px;font-weight:700;color:var(--accent);}
+.mini-sl{font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+
+/* ═══════════════════════════════════════════
+   WS STATUS
+═══════════════════════════════════════════ */
+#wss{position:fixed;bottom:10px;right:10px;z-index:9999;font-family:var(--fm);font-size:9px;letter-spacing:1px;padding:5px 12px;border-radius:20px;border:1px solid;transition:all .3s;}
+#wss.connected{background:rgba(6,214,160,.1);border-color:rgba(6,214,160,.35);color:var(--green);}
+#wss.disconnected{background:rgba(239,35,60,.08);border-color:rgba(239,35,60,.3);color:var(--red);}
+#wss.connecting{background:rgba(244,162,97,.08);border-color:rgba(244,162,97,.3);color:var(--yellow);}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════ */
+#app{display:none;min-height:100vh;}
+.sidebar{
+  position:fixed;top:0;left:0;width:222px;height:100vh;z-index:200;
+  background:linear-gradient(180deg,#ffffff,#f5f7ff);
+  border-right:1.5px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:2px 0 16px rgba(67,97,238,0.08);
+}
+.sidebar::after{
+  content:'';position:absolute;top:0;right:0;bottom:0;width:2px;
+  background:linear-gradient(180deg,transparent,var(--accent),transparent);
+  animation:sLine 4s linear infinite;
+}
+@keyframes sLine{0%{opacity:0;transform:scaleY(0);transform-origin:top}50%{opacity:1}100%{opacity:0;transform:scaleY(1);transform-origin:top}}
+.sb-brand{padding:18px 14px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;gap:10px;}
+.sb-ico{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#4361ee,#7209b7);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(67,97,238,0.3);}
+.sb-brand h2{font-family:var(--ft);font-size:12px;font-weight:700;color:var(--accent);letter-spacing:2px;}
+.sb-brand p{font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:1px;}
+.sb-online{padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;font-family:var(--fm);font-size:8px;color:var(--green);}
+.ld{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:ldblink 1.5s ease-in-out infinite;}
+@keyframes ldblink{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-nav{flex:1;padding:10px 0;overflow-y:auto;}
+.sb-sec{padding:0 10px;margin-bottom:2px;}
+.sb-sec-lbl{font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:2px;padding:7px 4px 3px;opacity:.6;text-transform:uppercase;}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-family:var(--fb);font-size:13px;font-weight:600;color:var(--text2);transition:all .2s;margin-bottom:1px;}
+.ni:hover{background:rgba(67,97,238,0.06);color:var(--accent);}
+.ni.active{background:linear-gradient(90deg,rgba(67,97,238,0.12),rgba(67,97,238,0.04));color:var(--accent);border-left:3px solid var(--accent);}
+.nico{font-size:15px;width:18px;text-align:center;}
+.nbadge{margin-left:auto;background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:9px;font-weight:700;font-family:var(--fm);}
+.nbadge.g{background:var(--green);color:#000;}
+.sb-foot{padding:10px 14px;border-top:1.5px solid var(--border);}
+
+/* ═══════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════ */
+.topbar{
+  position:fixed;top:0;left:222px;right:0;height:54px;z-index:100;
+  background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);
+  border-bottom:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+  box-shadow:0 2px 14px rgba(67,97,238,0.08);
+}
+.tb-left{display:flex;align-items:center;gap:14px;}
+.tb-clk{font-family:var(--fm);font-size:14px;color:var(--accent);}
+.tb-dt{font-family:var(--fm);font-size:9px;color:var(--text3);}
+.tb-right{display:flex;align-items:center;gap:14px;}
+.thlvl{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-family:var(--fm);font-size:9px;font-weight:700;letter-spacing:1px;border:1px solid;}
+.thlvl.critical{background:rgba(239,35,60,.08);border-color:rgba(239,35,60,.3);color:var(--red);}
+.thlvl.high{background:rgba(251,133,0,.08);border-color:rgba(251,133,0,.3);color:var(--orange);}
+.thlvl.medium{background:rgba(244,162,97,.08);border-color:rgba(244,162,97,.3);color:var(--yellow);}
+.thlvl.low{background:rgba(6,214,160,.08);border-color:rgba(6,214,160,.25);color:var(--green);}
+.nbtn{position:relative;background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:4px;}
+.nbtn:hover{color:var(--accent);}
+.nbdot{position:absolute;top:-1px;right:-1px;background:var(--red);color:#fff;border-radius:50%;width:15px;height:15px;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--fm);animation:nPulse 1s ease-in-out infinite;}
+@keyframes nPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,35,60,.7)}50%{box-shadow:0 0 0 5px transparent}}
+.uinfo{display:flex;align-items:center;gap:8px;font-family:var(--fb);font-size:13px;font-weight:600;color:var(--text);}
+.av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;border:2px solid rgba(67,97,238,0.2);}
+
+/* ═══════════════════════════════════════════
+   MAIN + PAGES
+═══════════════════════════════════════════ */
+.main{margin-left:222px;padding-top:54px;min-height:100vh;}
+.page{display:none;padding:20px;}
+.page.active{display:block;}
+.phdr{margin-bottom:18px;}
+.phdr h1{font-family:var(--ft);font-size:19px;font-weight:700;color:var(--text);letter-spacing:3px;}
+.phdr p{font-family:var(--fm);font-size:9px;color:var(--text3);margin-top:3px;letter-spacing:1px;}
+.rld{width:6px;height:6px;border-radius:50%;background:var(--red);display:inline-block;margin-right:5px;animation:rld2 1s ease-in-out infinite;}
+@keyframes rld2{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(239,35,60,.7)}50%{opacity:.4;box-shadow:0 0 0 4px transparent}}
+
+/* stat cards */
+.srow{display:grid;gap:12px;margin-bottom:18px;}
+.s6{grid-template-columns:repeat(6,1fr);}
+.s4{grid-template-columns:repeat(4,1fr);}
+.s3{grid-template-columns:repeat(3,1fr);}
+.s2{grid-template-columns:1fr 1fr;}
+.sc{background:var(--white);border:1.5px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden;cursor:pointer;transition:all .25s;box-shadow:var(--shadow2);}
+.sc:hover{border-color:var(--accent);box-shadow:var(--shadow);transform:translateY(-2px);}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;}
+.sc.blue::before{background:linear-gradient(90deg,#4361ee,#7209b7);}
+.sc.green::before{background:linear-gradient(90deg,#06d6a0,#4361ee);}
+.sc.red::before{background:linear-gradient(90deg,#ef233c,#fb8500);}
+.sc.orange::before{background:linear-gradient(90deg,#fb8500,#f4a261);}
+.sc.purple::before{background:linear-gradient(90deg,#7209b7,#4361ee);}
+.sc.yellow::before{background:linear-gradient(90deg,#f4a261,#fb8500);}
+.sc-lbl{font-family:var(--fm);font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.sc-val{font-family:var(--ft);font-size:26px;font-weight:700;line-height:1;}
+.sc.blue .sc-val{color:var(--accent);}
+.sc.green .sc-val{color:var(--green);}
+.sc.red .sc-val{color:var(--red);}
+.sc.orange .sc-val{color:var(--orange);}
+.sc.purple .sc-val{color:var(--purple);}
+.sc.yellow .sc-val{color:var(--yellow);}
+.sc-sub{font-family:var(--fm);font-size:9px;color:var(--text3);margin-top:4px;}
+.sc-ico{position:absolute;right:12px;top:12px;font-size:22px;opacity:.2;}
+
+/* grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+.g64{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-bottom:14px;}
+
+/* panels */
+.panel{background:var(--white);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow2);}
+.panel.mb{margin-bottom:14px;}
+.ph{padding:13px 16px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(67,97,238,0.02);}
+.pt{font-family:var(--ft);font-size:10px;font-weight:700;color:var(--accent);letter-spacing:2px;}
+.pb{padding:14px;}
+
+/* buttons */
+.btn{padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-family:var(--fm);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;transition:all .2s;}
+.bp{background:linear-gradient(135deg,#4361ee,#7209b7);color:#fff;box-shadow:0 2px 8px rgba(67,97,238,0.25);}
+.bp:hover{box-shadow:0 4px 16px rgba(67,97,238,0.4);transform:translateY(-1px);}
+.bd{background:linear-gradient(135deg,#c1121f,#ef233c);color:#fff;}
+.bd:hover{box-shadow:0 4px 16px rgba(239,35,60,.35);}
+.bg2{background:transparent;border:1.5px solid var(--border);color:var(--text2);}
+.bg2:hover{border-color:var(--accent);color:var(--accent);}
+.bs{background:linear-gradient(135deg,#06d6a0,#4361ee);color:#fff;}
+.bsm{padding:4px 9px;font-size:8px;}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px 12px;border-bottom:1.5px solid var(--border);background:rgba(67,97,238,0.03);}
+.tbl td{padding:9px 12px;border-bottom:1px solid rgba(67,97,238,0.07);font-family:var(--fm);font-size:10px;color:var(--text);vertical-align:middle;}
+.tbl tr:hover td{background:rgba(67,97,238,0.03);}
+.tbl tr.flash td{animation:rowfl .5s ease-out;}
+@keyframes rowfl{0%{background:rgba(239,35,60,.1)}100%{background:transparent}}
+.badge{padding:2px 8px;border-radius:20px;font-size:8px;font-weight:700;font-family:var(--fm);display:inline-block;}
+.badge.critical{background:rgba(239,35,60,.1);color:var(--red);border:1px solid rgba(239,35,60,.25);}
+.badge.high{background:rgba(251,133,0,.1);color:var(--orange);border:1px solid rgba(251,133,0,.25);}
+.badge.medium{background:rgba(244,162,97,.1);color:var(--yellow);border:1px solid rgba(244,162,97,.25);}
+.badge.low,.badge.info{background:rgba(6,214,160,.1);color:var(--green);border:1px solid rgba(6,214,160,.2);}
+.badge.new{color:var(--red);background:rgba(239,35,60,.08);border:1px solid rgba(239,35,60,.15);}
+.badge.acknowledged{color:var(--text3);background:rgba(0,0,0,.04);}
+.badge.resolved{color:var(--green);}
+
+/* toasts */
+#toasts{position:fixed;top:64px;right:14px;z-index:10000;display:flex;flex-direction:column;gap:6px;max-width:380px;}
+.toast{background:var(--white);border-left:4px solid var(--red);border-radius:12px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12),0 0 0 1px var(--border);animation:tIn .3s ease-out;max-width:380px;}
+@keyframes tIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.out{animation:tOut .25s ease-in forwards;}
+@keyframes tOut{to{transform:translateX(110%);opacity:0}}
+.tI{font-size:18px;flex-shrink:0;margin-top:1px;}
+.tB{flex:1;}
+.tT{font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.tM{font-size:10px;color:var(--text2);line-height:1.4;}
+.tTm{font-size:9px;color:var(--text3);margin-top:3px;}
+.tX{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;flex-shrink:0;}
+.toast.success{border-color:var(--green);}
+.toast.info{border-color:var(--accent);}
+.toast.warning{border-color:var(--orange);}
+.toast.high{border-color:var(--orange);}
+.toast.medium{border-color:var(--yellow);}
+
+/* gauges */
+.gauv{font-family:var(--ft);font-size:26px;font-weight:700;margin-top:5px;}
+
+/* monitor bars */
+.mbar{margin-bottom:8px;}
+.mbar-lbl{display:flex;justify-content:space-between;margin-bottom:3px;font-family:var(--fm);font-size:9px;color:var(--text2);}
+.mbar-tr{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;}
+.mbar-f{height:100%;border-radius:3px;transition:width .6s ease;}
+
+/* log stream */
+.logstream{font-family:var(--fm);font-size:10px;background:#f8f9ff;border-radius:10px;padding:10px;overflow-y:auto;border:1.5px solid var(--border);}
+.le{padding:2px 0;line-height:1.5;}
+.lt{color:#4361ee;}
+.li3{color:var(--green);}
+.lw{color:var(--orange);}
+.le2{color:var(--red);}
+.lc2{color:var(--red);font-weight:700;}
+
+/* ip block list */
+.ipitem{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(67,97,238,0.07);font-family:var(--fm);font-size:10px;}
+.ipdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.ipdot.blocked{background:var(--red);box-shadow:0 0 6px var(--red);}
+.ipdot.watching{background:var(--orange);box-shadow:0 0 6px var(--orange);}
+.ipaddr{color:var(--accent);flex:0 0 130px;font-weight:700;}
+.ipreason{color:var(--text2);flex:1;font-size:9px;}
+.iptime{color:var(--text3);font-size:9px;text-align:right;}
+
+/* attack cards */
+.agrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.acard{background:var(--white);border:1.5px solid var(--border);border-radius:14px;padding:16px;text-align:center;font-family:var(--fb);transition:all .3s;box-shadow:var(--shadow2);}
+.acard:hover{border-color:var(--accent);box-shadow:0 8px 24px rgba(67,97,238,0.15);transform:translateY(-3px);}
+.acard.running{border-color:var(--orange);animation:atkRun .5s ease-in-out infinite alternate;}
+@keyframes atkRun{0%{box-shadow:var(--shadow2)}100%{box-shadow:0 0 20px rgba(251,133,0,.25)}}
+.aico{font-size:30px;display:block;margin-bottom:7px;}
+.atitle{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.adesc{font-size:10px;color:var(--text3);margin-bottom:10px;}
+.aprog{height:3px;background:var(--bg2);border-radius:2px;overflow:hidden;display:none;margin-bottom:6px;}
+.aprog.show{display:block;}
+.aprogf{height:100%;background:var(--orange);width:0%;transition:width .15s;}
+.abtn{width:100%;padding:8px;border-radius:8px;border:none;cursor:pointer;font-family:var(--fm);font-size:9px;font-weight:700;letter-spacing:1px;background:linear-gradient(135deg,#4361ee,#7209b7);color:#fff;transition:all .2s;box-shadow:0 2px 8px rgba(67,97,238,0.25);}
+.abtn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(67,97,238,0.4);}
+
+/* password modal for port scan */
+.mbg{position:fixed;inset:0;z-index:5000;background:rgba(26,26,46,0.4);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;}
+.mbg.show{display:flex;}
+.modal{background:var(--white);border:1.5px solid var(--border);border-radius:18px;width:440px;max-width:90vw;box-shadow:0 24px 60px rgba(67,97,238,0.18);animation:mIn .3s ease-out;}
+@keyframes mIn{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.mhdr{padding:16px 20px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.mhdr h3{font-family:var(--ft);font-size:12px;color:var(--accent);letter-spacing:2px;}
+.mx{background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;}
+.mbody{padding:20px;}
+.mfoot{padding:16px 20px;border-top:1.5px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.fld{margin-bottom:12px;}
+.fll{font-family:var(--fm);font-size:9px;color:var(--accent);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;}
+.fli{width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:var(--fm);font-size:12px;outline:none;transition:all .2s;}
+.fli:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,0.1);}
+
+/* quick actions */
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.qabtn{padding:13px;border-radius:12px;border:none;cursor:pointer;font-family:var(--fb);font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px;justify-content:center;transition:all .25s;letter-spacing:.5px;box-shadow:var(--shadow2);}
+.qabtn:hover{transform:translateY(-2px);filter:brightness(1.08);}
+.qabtn.block2{background:linear-gradient(135deg,#c1121f,#ef233c);color:#fff;box-shadow:0 4px 14px rgba(239,35,60,.25);}
+.qabtn.isol{background:linear-gradient(135deg,#003566,#4361ee);color:#fff;}
+.qabtn.logsb{background:linear-gradient(135deg,#2d2d6b,#4361ee);color:#fff;}
+.qabtn.rep{background:linear-gradient(135deg,#1b4332,#06d6a0);color:#fff;}
+
+.div2{height:1.5px;background:var(--border);margin:12px 0;}
+.inforow{display:flex;justify-content:space-between;font-family:var(--fm);font-size:9px;margin-bottom:5px;}
+.infokey{color:var(--text3);}
+.infoval{color:var(--accent);}
+.infoval.g{color:var(--green);}
+.infoval.r{color:var(--red);}
+.infoval.o{color:var(--orange);}
+
+/* tabs */
+.tabs{display:flex;border-bottom:1.5px solid var(--border);margin-bottom:14px;}
+.tab{padding:9px 18px;font-family:var(--fm);font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* cores grid */
+.cores-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:8px;}
+.core-bar{height:44px;background:var(--bg2);border-radius:6px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;border:1px solid var(--border);}
+.core-fill{width:100%;transition:height .5s ease;border-radius:4px;}
+.core-lbl{font-family:var(--fm);font-size:7px;color:var(--text3);text-align:center;padding:2px 0;}
+
+.livdot{display:inline-flex;align-items:center;gap:4px;font-family:var(--fm);font-size:8px;}
+.livdot::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:ldblink 1.2s ease-in-out infinite;}
+</style>
+</head>
+<body>
+
+<!-- BOOT -->
+<div id="boot">
+  <div style="font-family:'Orbitron',sans-serif;font-size:30px;color:#4361ee;text-shadow:0 0 40px #4361ee;letter-spacing:6px;margin-bottom:6px;">SMART HIDS</div>
+  <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#7777aa;letter-spacing:3px;margin-bottom:18px;">HOST BASED INTRUSION DETECTION SYSTEM v3.0</div>
+  <div class="bb"><div class="bbf" id="bbf"></div></div>
+  <div class="bt" id="bst">INITIALIZING...</div>
+  <div class="bl2" id="bll"></div>
+</div>
+
+<!-- LOGIN + REGISTER -->
+<div id="login-page">
+  <canvas id="login-canvas"></canvas>
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+
+  <div class="lbox">
+    <!-- BRAND -->
+    <div class="lbrand">
+      <span class="lshield">🛡️</span>
+      <div class="ltitle">SMART HIDS</div>
+      <div class="lsub">🔐 Host Based Intrusion Detection System 🔐</div>
+    </div>
+
+    <!-- TABS -->
+    <div class="atabs">
+      <button class="atab active" id="tab-login" onclick="authTab('login')">🔐 Sign In</button>
+      <button class="atab" id="tab-reg" onclick="authTab('register')">✨ Create Account</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div class="aform show" id="auth-login">
+      <div class="abox err" id="lerr"><span>⚠️</span><span id="lerr-msg">Invalid credentials</span></div>
+      <div class="abox succ" id="lok"><span>✅</span><span>Login successful! Loading dashboard...</span></div>
+
+      <div class="inp-g">
+        <label class="inp-lbl">Username or Email</label>
+        <div class="inp-wrap">
+          <span class="inp-ico">👤</span>
+          <input type="text" class="inp" id="lu" placeholder="Enter username or email" autocomplete="off"/>
+        </div>
+      </div>
+      <div class="inp-g">
+        <label class="inp-lbl">Password</label>
+        <div class="inp-wrap">
+          <span class="inp-ico">🔒</span>
+          <input type="password" class="inp" id="lp" placeholder="Enter your password" autocomplete="off"/>
+        </div>
+      </div>
+
+      <button class="lbtn" onclick="doLogin()">⚡ Sign In to Dashboard</button>
+      <div class="spin-wrap" id="login-spin"><div class="spinner"></div> Authenticating...</div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div class="aform" id="auth-reg">
+      <div class="abox err" id="rerr"><span>⚠️</span><span id="rerr-msg">Fix errors above</span></div>
+      <div class="abox succ" id="rok"><span>✅</span><span>Account created! Switching to login...</span></div>
+
+      <div class="inp-g">
+        <label class="inp-lbl">Full Name</label>
+        <div class="inp-wrap">
+          <span class="inp-ico">👤</span>
+          <input type="text" class="inp" id="rname" placeholder="Your full name" oninput="vf(this,'name')"/>
+        </div>
+      </div>
+      <div class="inp-g">
+        <label class="inp-lbl">Email Address</label>
+        <div class="inp-wrap">
+          <span class="inp-ico">📧</span>
+          <input type="email" class="inp" id="remail" placeholder="your@email.com" oninput="vf(this,'email')"/>
+        </div>
+      </div>
+      <div class="inp-g">
+        <label class="inp-lbl">Username</label>
+        <div class="inp-wrap">
+          <span class="inp-ico">🏷️</span>
+          <input type="text" class="inp" id="runame" placeholder="Choose a username (min 3 chars)" oninput="vf(this,'uname')"/>
+        </div>
+      </div>
+      <div class="inp-g">
+        <label class="inp-lbl">Password</label>
+        <div class="inp-wrap">
+          <span class="inp-ico">🔑</span>
+          <input type="password" class="inp" id="rpass" placeholder="Create strong password" oninput="showStr(this.value)"/>
+        </div>
+        <div class="str-wrap">
+          <div class="str-row"><span>Strength</span><span id="str-lbl" style="color:var(--text3)">—</span></div>
+          <div class="str-bar"><div class="str-fill" id="str-fill"></div></div>
+        </div>
+      </div>
+      <div class="inp-g">
+        <label class="inp-lbl">Confirm Password</label>
+        <div class="inp-wrap">
+          <span class="inp-ico">🔑</span>
+          <input type="password" class="inp" id="rpass2" placeholder="Repeat your password" oninput="vf(this,'confirm')"/>
+        </div>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px;text-transform:uppercase;">Select Role</div>
+      <div class="role-row">
+        <div class="rpill sel" id="role-admin" onclick="pickRole('admin',this)">
+          <span class="rpill-ico">👑</span><span class="rpill-lbl">Admin</span>
+        </div>
+        <div class="rpill" id="role-analyst" onclick="pickRole('analyst',this)">
+          <span class="rpill-ico">🔍</span><span class="rpill-lbl">Analyst</span>
+        </div>
+        <div class="rpill" id="role-viewer" onclick="pickRole('viewer',this)">
+          <span class="rpill-ico">👁️</span><span class="rpill-lbl">Viewer</span>
+        </div>
+      </div>
+
+      <button class="lbtn reg-btn" onclick="doRegister()">✨ Create Account</button>
+      <div class="spin-wrap" id="reg-spin"><div class="spinner"></div> Creating account...</div>
+    </div>
+
+    <div class="lonline"><div class="lonl-dot"></div><span id="onl-cnt">3</span>&nbsp;OPERATORS ONLINE</div>
+    <div class="mini-stats">
+      <div class="mini-sc"><div class="mini-sv" id="ms-users">1</div><div class="mini-sl">Accounts</div></div>
+      <div class="mini-sc"><div class="mini-sv" id="ms-alerts">—</div><div class="mini-sl">Alerts</div></div>
+      <div class="mini-sc"><div class="mini-sv" id="ms-blocked">—</div><div class="mini-sl">Blocked</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- WS STATUS -->
+<div id="wss" class="disconnected">⬤ BACKEND OFFLINE</div>
+<!-- TOASTS -->
+<div id="toasts"></div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-ico">🛡️</div>
+      <div><h2>SMART HIDS</h2><p>LIVE MONITORING</p></div>
+    </div>
+    <div class="sb-online"><div class="ld"></div>REAL-TIME ACTIVE</div>
+    <nav class="sb-nav">
+      <div class="sb-sec">
+        <div class="sb-sec-lbl">MAIN</div>
+        <div class="ni active" onclick="goPage('dashboard',this)"><span class="nico">📊</span>Dashboard</div>
+        <div class="ni" onclick="goPage('alerts',this)"><span class="nico">🚨</span>Alerts<span class="nbadge" id="nb-a">0</span></div>
+        <div class="ni" onclick="goPage('realtime',this)"><span class="nico">📡</span>Real-Time<span class="nbadge g">LIVE</span></div>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-sec-lbl">ANALYSIS</div>
+        <div class="ni" onclick="goPage('network',this)"><span class="nico">🌐</span>Network</div>
+        <div class="ni" onclick="goPage('processes',this)"><span class="nico">⚙️</span>Processes</div>
+        <div class="ni" onclick="goPage('connections',this)"><span class="nico">🔗</span>Connections</div>
+        <div class="ni" onclick="goPage('loginanalysis',this)"><span class="nico">👤</span>Login Analysis</div>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-sec-lbl">SECURITY</div>
+        <div class="ni" onclick="goPage('simulate',this)"><span class="nico">💥</span>Attack Sim</div>
+        <div class="ni" onclick="goPage('ipblocks',this)"><span class="nico">🚫</span>IP Blocks<span class="nbadge" id="nb-b">0</span></div>
+        <div class="ni" onclick="goPage('rules',this)"><span class="nico">📋</span>Rules</div>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-sec-lbl">SYSTEM</div>
+        <div class="ni" onclick="goPage('logs',this)"><span class="nico">📄</span>Logs</div>
+        <div class="ni" onclick="goPage('settings',this)"><span class="nico">⚙️</span>Settings</div>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <div class="ni" onclick="logout()"><span class="nico">🚪</span>Logout</div>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <div class="tb-left">
+      <div><div class="tb-clk" id="clk">--:--:--</div><div class="tb-dt" id="dtt">---</div></div>
+      <div style="width:1px;height:26px;background:var(--border)"></div>
+      <div class="thlvl high" id="thlvl">⚠️ &nbsp;THREAT: <strong id="thtxt" style="margin-left:3px">--</strong></div>
+    </div>
+    <div class="tb-right">
+      <div class="livdot" style="font-size:8px;color:var(--green)">LIVE</div>
+      <button class="nbtn" onclick="goPage('alerts',null)">🔔<span class="nbdot" id="nc">0</span></button>
+      <div class="uinfo"><div class="av" id="av-letter">A</div><span id="uname">Admin</span></div>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="phdr"><h1>⚔️ SECURITY DASHBOARD</h1><p><span class="rld"></span>REAL-TIME DATA — LIVE FROM HOST — LAST: <span id="lupd">--</span></p></div>
+      <div class="srow s6">
+        <div class="sc blue"><div class="sc-lbl">CPU Usage</div><div class="sc-val" id="sc-cpu">--%</div><div class="sc-sub" id="sc-cpu2">-- cores</div><div class="sc-ico">💻</div></div>
+        <div class="sc purple"><div class="sc-lbl">Memory</div><div class="sc-val" id="sc-mem">--%</div><div class="sc-sub" id="sc-mem2">--/-- GB</div><div class="sc-ico">🧠</div></div>
+        <div class="sc green"><div class="sc-lbl">Disk</div><div class="sc-val" id="sc-disk">--%</div><div class="sc-sub" id="sc-disk2">--/-- GB</div><div class="sc-ico">💾</div></div>
+        <div class="sc orange"><div class="sc-lbl">Net In</div><div class="sc-val" id="sc-netin" style="font-size:17px">-- KB/s</div><div class="sc-sub" id="sc-netout">Out: --</div><div class="sc-ico">🌐</div></div>
+        <div class="sc red"><div class="sc-lbl">Active Alerts</div><div class="sc-val" id="sc-alerts">--</div><div class="sc-sub" id="sc-anew">-- new</div><div class="sc-ico">🚨</div></div>
+        <div class="sc yellow"><div class="sc-lbl">Blocked IPs</div><div class="sc-val" id="sc-blocked">--</div><div class="sc-sub">Auto+Manual</div><div class="sc-ico">🚫</div></div>
+      </div>
+      <div class="g64">
+        <div class="panel"><div class="ph"><span class="pt">📈 LIVE NETWORK BANDWIDTH</span><span class="livdot" style="font-size:8px;color:var(--green)">REAL DATA</span></div><div class="pb"><div style="height:160px"><canvas id="ch-traffic"></canvas></div></div></div>
+        <div class="panel"><div class="ph"><span class="pt">⚡ QUICK ACTIONS</span></div>
+          <div class="pb">
+            <div class="qa">
+              <button class="qabtn block2" onclick="openBlockModal()">🚫 Block IP</button>
+              <button class="qabtn isol" onclick="toast('Device isolation queued','ISOLATE','info')">🔒 Isolate</button>
+              <button class="qabtn logsb" onclick="goPage('logs',null)">📄 Live Logs</button>
+              <button class="qabtn rep" onclick="genReport()">📊 Report</button>
+            </div>
+            <div class="div2"></div>
+            <div class="mbar"><div class="mbar-lbl"><span>CPU</span><span id="db-cpu-lbl">--%</span></div><div class="mbar-tr"><div class="mbar-f" id="db-cpu-bar" style="background:linear-gradient(90deg,#4361ee,#7209b7)"></div></div></div>
+            <div class="mbar"><div class="mbar-lbl"><span>Memory</span><span id="db-mem-lbl">--%</span></div><div class="mbar-tr"><div class="mbar-f" id="db-mem-bar" style="background:linear-gradient(90deg,#7209b7,#4361ee)"></div></div></div>
+            <div class="mbar"><div class="mbar-lbl"><span>Disk</span><span id="db-dsk-lbl">--%</span></div><div class="mbar-tr"><div class="mbar-f" id="db-dsk-bar" style="background:linear-gradient(90deg,#06d6a0,#4361ee)"></div></div></div>
+            <div class="div2"></div>
+            <div class="inforow"><span class="infokey">Hostname</span><span class="infoval" id="db-host">--</span></div>
+            <div class="inforow"><span class="infokey">Platform</span><span class="infoval" id="db-plat">--</span></div>
+            <div class="inforow"><span class="infokey">Uptime</span><span class="infoval g" id="db-upt">--</span></div>
+            <div class="inforow"><span class="infokey">Net In</span><span class="infoval" id="db-ni">--</span></div>
+            <div class="inforow"><span class="infokey">Net Out</span><span class="infoval r" id="db-no">--</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel"><div class="ph"><span class="pt">🚨 RECENT ALERTS (LIVE)</span><button class="btn bg2 bsm" onclick="goPage('alerts',null)">View All</button></div>
+        <table class="tbl"><thead><tr><th>TIME</th><th>TYPE</th><th>SOURCE IP</th><th>TARGET</th><th>SEV</th><th>STATUS</th><th>DETAIL</th><th>ACK</th></tr></thead><tbody id="db-alerts"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="page" id="page-alerts">
+      <div class="phdr"><h1>🚨 SECURITY ALERTS</h1><p><span class="rld"></span>LIVE THREAT FEED — REAL SYSTEM EVENTS</p></div>
+      <div class="srow s4">
+        <div class="sc red"><div class="sc-lbl">Critical</div><div class="sc-val" id="ac-c">0</div><div class="sc-ico">🔴</div></div>
+        <div class="sc orange"><div class="sc-lbl">High</div><div class="sc-val" id="ac-h">0</div><div class="sc-ico">🟠</div></div>
+        <div class="sc yellow"><div class="sc-lbl">Medium</div><div class="sc-val" id="ac-m">0</div><div class="sc-ico">🟡</div></div>
+        <div class="sc green"><div class="sc-lbl">Low/Info</div><div class="sc-val" id="ac-l">0</div><div class="sc-ico">🟢</div></div>
+      </div>
+      <div class="panel"><div class="ph"><span class="pt">ALL ALERTS</span><div style="display:flex;gap:6px"><button class="btn bd bsm" onclick="clearAlerts()">🗑 Clear</button><button class="btn bp bsm" onclick="exportAlerts()">📤 Export</button></div></div>
+        <table class="tbl"><thead><tr><th>#</th><th>TIME</th><th>TYPE</th><th>SOURCE IP</th><th>TARGET</th><th>SEV</th><th>STATUS</th><th>DETAIL</th><th>ACK</th></tr></thead><tbody id="all-alerts"></tbody></table>
+      </div>
+    </div>
+
+    <!-- REALTIME -->
+    <div class="page" id="page-realtime">
+      <div class="phdr"><h1>📡 REAL-TIME MONITOR</h1><p><span class="rld"></span>LIVE HARDWARE DATA FROM OS</p></div>
+      <div class="g3">
+        <div class="panel"><div class="ph"><span class="pt">💻 CPU</span></div><div class="pb" style="text-align:center"><canvas id="gauCPU" width="140" height="140"></canvas><div class="gauv" style="color:var(--accent)" id="rt-cpu">--%</div><div style="font-family:var(--fm);font-size:8px;color:var(--text3)" id="rt-cpu2">-- cores</div></div></div>
+        <div class="panel"><div class="ph"><span class="pt">🧠 MEMORY</span></div><div class="pb" style="text-align:center"><canvas id="gauMEM" width="140" height="140"></canvas><div class="gauv" style="color:var(--purple)" id="rt-mem">--%</div><div style="font-family:var(--fm);font-size:8px;color:var(--text3)" id="rt-mem2">--/-- GB</div></div></div>
+        <div class="panel"><div class="ph"><span class="pt">💾 DISK</span></div><div class="pb" style="text-align:center"><canvas id="gauDSK" width="140" height="140"></canvas><div class="gauv" style="color:var(--green)" id="rt-dsk">--%</div><div style="font-family:var(--fm);font-size:8px;color:var(--text3)" id="rt-dsk2">--/-- GB</div></div></div>
+      </div>
+      <div class="panel mb"><div class="ph"><span class="pt">🔢 CPU CORES (REAL)</span></div><div class="pb"><div class="cores-grid" id="cores-grid"></div></div></div>
+      <div class="g2">
+        <div class="panel"><div class="ph"><span class="pt">📦 NETWORK STATS</span></div><div class="pb">
+          <div class="mbar"><div class="mbar-lbl"><span>Pkts In/s</span><span id="rt-pi">--</span></div><div class="mbar-tr"><div class="mbar-f" id="rt-pi-b" style="background:var(--accent)"></div></div></div>
+          <div class="mbar"><div class="mbar-lbl"><span>Pkts Out/s</span><span id="rt-po">--</span></div><div class="mbar-tr"><div class="mbar-f" id="rt-po-b" style="background:var(--red)"></div></div></div>
+          <div class="mbar"><div class="mbar-lbl"><span>BW In</span><span id="rt-bi">--</span></div><div class="mbar-tr"><div class="mbar-f" id="rt-bi-b" style="background:var(--green)"></div></div></div>
+          <div class="mbar"><div class="mbar-lbl"><span>BW Out</span><span id="rt-bo">--</span></div><div class="mbar-tr"><div class="mbar-f" id="rt-bo-b" style="background:var(--orange)"></div></div></div>
+          <div class="div2"></div>
+          <div class="inforow"><span class="infokey">Total Recv</span><span class="infoval" id="rt-tr">--</span></div>
+          <div class="inforow"><span class="infokey">Total Sent</span><span class="infoval r" id="rt-ts">--</span></div>
+          <div class="inforow"><span class="infokey">Errors</span><span class="infoval o" id="rt-ei">--</span></div>
+        </div></div>
+        <div class="panel"><div class="ph"><span class="pt">🌐 INTERFACES</span></div><table class="tbl"><thead><tr><th>NAME</th><th>STATUS</th><th>SPEED</th></tr></thead><tbody id="rt-ifaces"></tbody></table></div>
+      </div>
+      <div class="panel"><div class="ph"><span class="pt">📈 LIVE TRAFFIC HISTORY</span></div><div class="pb"><div style="height:150px"><canvas id="ch-live"></canvas></div></div></div>
+    </div>
+
+    <!-- NETWORK -->
+    <div class="page" id="page-network">
+      <div class="phdr"><h1>🌐 NETWORK TRAFFIC</h1><p><span class="rld"></span>REAL BANDWIDTH &amp; PACKET DATA</p></div>
+      <div class="srow s4">
+        <div class="sc blue"><div class="sc-lbl">Pkts/s In</div><div class="sc-val" id="net-pi">--</div><div class="sc-ico">⬇️</div></div>
+        <div class="sc red"><div class="sc-lbl">Pkts/s Out</div><div class="sc-val" id="net-po">--</div><div class="sc-ico">⬆️</div></div>
+        <div class="sc green"><div class="sc-lbl">BW In</div><div class="sc-val" id="net-bi" style="font-size:16px">--</div><div class="sc-ico">📥</div></div>
+        <div class="sc orange"><div class="sc-lbl">BW Out</div><div class="sc-val" id="net-bo" style="font-size:16px">--</div><div class="sc-ico">📤</div></div>
+      </div>
+      <div class="g2">
+        <div class="panel"><div class="ph"><span class="pt">BANDWIDTH HISTORY</span></div><div class="pb"><div style="height:180px"><canvas id="ch-nethist"></canvas></div></div></div>
+        <div class="panel"><div class="ph"><span class="pt">PACKET HISTORY</span></div><div class="pb"><div style="height:180px"><canvas id="ch-pkthist"></canvas></div></div></div>
+      </div>
+    </div>
+
+    <!-- PROCESSES -->
+    <div class="page" id="page-processes">
+      <div class="phdr"><h1>⚙️ PROCESSES</h1><p><span class="rld"></span>REAL RUNNING PROCESSES — TOP 25 BY CPU</p></div>
+      <div class="panel"><div class="ph"><span class="pt">PROCESS LIST (REAL)</span></div>
+        <table class="tbl"><thead><tr><th>PID</th><th>NAME</th><th>CPU%</th><th>MEM%</th><th>USER</th><th>STATUS</th><th>THREAT</th><th>ACTION</th></tr></thead><tbody id="proc-list"></tbody></table>
+      </div>
+    </div>
+
+    <!-- CONNECTIONS -->
+    <div class="page" id="page-connections">
+      <div class="phdr"><h1>🔗 CONNECTIONS</h1><p><span class="rld"></span>REAL ACTIVE CONNECTIONS — DETECTS ATTACKS FROM OTHER SYSTEMS</p></div>
+      <div class="panel"><div class="ph"><span class="pt">ACTIVE CONNECTIONS (REAL)</span><span style="font-family:var(--fm);font-size:9px;color:var(--green)" id="conn-ip-badge"></span></div>
+        <table class="tbl"><thead><tr><th>LOCAL</th><th>REMOTE IP</th><th>STATUS</th><th>PID</th><th>THREAT</th><th>ACTION</th></tr></thead><tbody id="conn-list"></tbody></table>
+      </div>
+    </div>
+
+    <!-- LOGIN ANALYSIS -->
+    <div class="page" id="page-loginanalysis">
+      <div class="phdr"><h1>👤 LOGIN ANALYSIS</h1><p>AUTHENTICATION EVENTS — READS REAL AUTH.LOG</p></div>
+      <div class="g2">
+        <div class="panel"><div class="ph"><span class="pt">FAILED LOGIN SOURCES</span></div>
+          <table class="tbl"><thead><tr><th>IP ADDRESS</th><th>FAILURES</th><th>LAST SEEN</th><th>STATUS</th></tr></thead><tbody id="la-tbody"></tbody></table>
+        </div>
+        <div class="panel"><div class="ph"><span class="pt">RECENT LOGIN EVENTS</span></div>
+          <div class="logstream" style="height:260px" id="la-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIMULATE -->
+    <div class="page" id="page-simulate">
+      <div class="phdr"><h1>💥 ATTACK SIMULATION</h1><p>⚠️ AUTHORIZED TEST ENV — GENERATES REAL ALERTS</p></div>
+      <div class="panel mb">
+        <div class="ph"><span class="pt">⚙️ SIMULATION CONFIG</span></div>
+        <div class="pb" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px">
+          <div class="fld"><label class="fll">Target IP</label><input type="text" class="fli" id="sim-tgt" value="192.168.1.100"/></div>
+          <div class="fld"><label class="fll">Source IP (Attacker)</label><input type="text" class="fli" id="sim-src" value="203.5.113.10"/></div>
+          <div class="fld"><label class="fll">Intensity</label><select class="fli" id="sim-int"><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select></div>
+          <div class="fld"><label class="fll">Attack Count</label><input type="number" class="fli" id="sim-cnt" value="1" min="1" max="5"/></div>
+        </div>
+      </div>
+      <div class="agrid" id="agrid"></div>
+      <div class="panel" style="margin-top:14px"><div class="ph"><span class="pt">SIMULATION OUTPUT</span><button class="btn bg2 bsm" onclick="clrSimLog()">Clear</button></div>
+        <div class="logstream" style="height:280px" id="sim-out"></div>
+      </div>
+    </div>
+
+    <!-- IP BLOCKS -->
+    <div class="page" id="page-ipblocks">
+      <div class="phdr"><h1>🚫 IP BLOCK MANAGEMENT</h1><p>AUTO-DETECTED + MANUALLY BLOCKED IPs</p></div>
+      <div class="g2">
+        <div class="panel"><div class="ph"><span class="pt">BLOCKED IPs</span><button class="btn bp bsm" onclick="openBlockModal()">+ Block IP</button></div><div id="ip-block-list"></div></div>
+        <div class="panel"><div class="ph"><span class="pt">BLOCK HISTORY</span></div><div class="pb"><div style="height:200px"><canvas id="ch-blocks"></canvas></div></div></div>
+      </div>
+    </div>
+
+    <!-- RULES -->
+    <div class="page" id="page-rules">
+      <div class="phdr"><h1>📋 DETECTION RULES</h1><p>ACTIVE SECURITY RULE ENGINE</p></div>
+      <div class="panel"><div class="ph"><span class="pt">RULE SET</span><button class="btn bp bsm" onclick="toast('Rule added','RULES','success')">+ Add Rule</button></div>
+        <table class="tbl"><thead><tr><th>ID</th><th>NAME</th><th>CONDITION</th><th>ACTION</th><th>PRIORITY</th><th>STATE</th></tr></thead><tbody id="rules-body"></tbody></table>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div class="page" id="page-logs">
+      <div class="phdr"><h1>📄 SYSTEM LOGS</h1><p><span class="rld"></span>LIVE FROM: AUTH.LOG / SYSLOG / SECURE</p></div>
+      <div class="panel"><div class="ph"><span class="pt">LOG STREAM</span>
+        <div style="display:flex;gap:6px">
+          <select class="fli" id="log-filter" style="padding:3px 8px;font-size:9px;width:auto;border-radius:8px" onchange="filterLogs()">
+            <option value="all">All</option><option value="error">Errors</option><option value="warn">Warnings</option><option value="crit">Critical</option>
+          </select>
+          <button class="btn bg2 bsm" onclick="clrLogs()">Clear</button>
+        </div>
+      </div>
+        <div class="logstream" style="height:500px" id="log-stream"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="phdr"><h1>⚙️ SETTINGS</h1><p>SYSTEM CONFIGURATION</p></div>
+      <div class="g2">
+        <div class="panel"><div class="ph"><span class="pt">BACKEND CONNECTION</span></div><div class="pb">
+          <div class="fld"><label class="fll">WebSocket URL</label><input type="text" class="fli" id="cfg-ws" value="ws://localhost:8765"/></div>
+          <div style="display:flex;gap:8px"><button class="btn bp" onclick="reconnectWS()">🔌 Reconnect</button><button class="btn bs" onclick="requestState()">🔄 Refresh</button></div>
+          <div class="div2"></div>
+          <div style="font-family:var(--fm);font-size:9px;color:var(--text2)">WS: <span id="cfg-ws-st" style="color:var(--red)">Disconnected</span><br/>Uptime: <span id="cfg-uptime">--</span></div>
+        </div></div>
+        <div class="panel"><div class="ph"><span class="pt">DETECTION THRESHOLDS</span></div><div class="pb">
+          <div class="fld"><label class="fll">Brute Force Threshold</label><input type="number" class="fli" value="5" id="cfg-bf"/></div>
+          <div class="fld"><label class="fll">Port Scan Threshold (ports)</label><input type="number" class="fli" value="20" id="cfg-ps"/></div>
+          <div class="fld"><label class="fll">Users</label>
+            <div id="users-list" style="font-family:var(--fm);font-size:10px;max-height:120px;overflow-y:auto"></div>
+          </div>
+          <button class="btn bp" onclick="saveSettings()">💾 Save</button>
+        </div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- BLOCK IP MODAL -->
+<div class="mbg" id="block-modal">
+  <div class="modal">
+    <div class="mhdr"><h3>🚫 BLOCK IP ADDRESS</h3><button class="mx" onclick="closeModal('block-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fld"><label class="fll">IP Address</label><input type="text" class="fli" id="bk-ip" placeholder="e.g. 192.168.1.100"/></div>
+      <div class="fld"><label class="fll">Reason</label><select class="fli" id="bk-reason"><option>Brute Force</option><option>Port Scan</option><option>Suspicious Activity</option><option>Malware C2</option><option>Manual Block</option></select></div>
+    </div>
+    <div class="mfoot"><button class="btn bg2" onclick="closeModal('block-modal')">Cancel</button><button class="btn bd" onclick="doBlock()">🚫 Block IP</button></div>
+  </div>
+</div>
+
+<!-- PORT SCAN PASSWORD MODAL -->
+<div class="mbg" id="portscan-modal">
+  <div class="modal">
+    <div class="mhdr"><h3>🔐 SECURITY VERIFICATION</h3><button class="mx" onclick="closeModal('portscan-modal')">✕</button></div>
+    <div class="mbody">
+      <div style="text-align:center;margin-bottom:16px;font-size:30px">🔍</div>
+      <p style="font-family:var(--fm);font-size:11px;color:var(--text2);text-align:center;margin-bottom:16px;line-height:1.6">
+        Port Scan is a sensitive operation.<br/>
+        Enter your account password to authorize this attack simulation.
+      </p>
+      <div class="abox err" id="ps-err" style="margin-bottom:12px"><span>⚠️</span><span id="ps-err-msg">Wrong password</span></div>
+      <div class="fld">
+        <label class="fll">Your Password</label>
+        <div style="position:relative">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.4">🔒</span>
+          <input type="password" class="fli" id="ps-pass" placeholder="Enter your password to confirm" style="padding-left:38px"/>
+        </div>
+      </div>
+      <div class="fld">
+        <label class="fll">Confirm Action</label>
+        <select class="fli" id="ps-confirm">
+          <option value="">-- Select to confirm --</option>
+          <option value="yes">Yes, I authorize this port scan</option>
+        </select>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn bg2" onclick="closeModal('portscan-modal')">Cancel</button>
+      <button class="btn bd" onclick="confirmPortScan()">🔍 Authorize Scan</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+const S={
+  ws:null,wsUrl:'ws://localhost:8765',connected:false,
+  charts:{},netH:[],alerts:[],logs:[],blocked:[],procs:[],conns:[],
+  prevAlertCount:0,pendingPortScanIdx:null,pendingPortScanKey:null,
+};
+const ATTACKS=[
+  {ico:'💣',title:'Brute Force',desc:'SSH/RDP rapid credential stuffing',key:'brute_force'},
+  {ico:'🔍',title:'Port Scan',desc:'⚠️ Requires password authorization',key:'port_scan',needsAuth:true},
+  {ico:'🌊',title:'DDoS Flood',desc:'UDP/ICMP/SYN packet flood attack',key:'ddos'},
+  {ico:'💉',title:'SQL Injection',desc:'HTTP SQLi probe and data extract',key:'sqli'},
+  {ico:'🕷️',title:'Malware Drop',desc:'Dropper + reverse shell + C2 beacon',key:'malware'},
+  {ico:'🎭',title:'MITM/ARP',desc:'ARP poisoning + credential intercept',key:'mitm'},
+  {ico:'💰',title:'Ransomware',desc:'File encryption + C2 ransom beacon',key:'ransomware'},
+  {ico:'🔺',title:'Priv Escalation',desc:'SUID/sudo privilege escalation',key:'privilege_escalation'},
+];
+const RULES_DATA=[
+  {id:'R001',name:'SSH Brute Force',cond:'>5 fails/60s',action:'Block IP + CRITICAL Alert',pri:'critical',on:true},
+  {id:'R002',name:'Port Scan',cond:'>20 ports/30s',action:'Alert + Flag IP',pri:'high',on:true},
+  {id:'R003',name:'RDP Brute Force',cond:'>3 fails/30s',action:'Block IP + Alert',pri:'critical',on:true},
+  {id:'R004',name:'Suspicious Process',cond:'Known malware name',action:'Alert + Quarantine',pri:'critical',on:true},
+  {id:'R005',name:'High CPU Process',cond:'Unknown proc >85% CPU',action:'Alert',pri:'high',on:true},
+  {id:'R006',name:'Suspicious Port',cond:'Connection to 4444/1337',action:'Block + Alert',pri:'critical',on:true},
+  {id:'R007',name:'Data Exfiltration',cond:'Outbound >10MB burst',action:'Block + Alert',pri:'high',on:true},
+  {id:'R008',name:'DDoS Detection',cond:'>80k pkts/sec',action:'Blackhole + CRITICAL Alert',pri:'critical',on:true},
+  {id:'R009',name:'ARP Spoofing',cond:'Dup MAC for gateway',action:'Alert + Block',pri:'high',on:true},
+  {id:'R010',name:'DNS Anomaly',cond:'>100 DNS req/min',action:'Alert',pri:'medium',on:false},
+];
+
+// ═══════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════
+const BMSGS=['[OK] Security kernel loaded','[OK] Network interfaces up',
+  '[OK] Firewall initialized','[OK] Threat intel feeds connected',
+  '[OK] Rule engine active','[OK] Log collectors started',
+  '[OK] Database connected','[OK] All systems operational'];
+(function boot(){
+  const fill=document.getElementById('bbf'),st=document.getElementById('bst'),log=document.getElementById('bll');
+  let i=0;
+  const iv=setInterval(()=>{
+    fill.style.width=((i+1)/BMSGS.length*100)+'%'; st.textContent=BMSGS[i];
+    const d=document.createElement('div'); d.textContent=BMSGS[i];
+    d.style.color='#4361ee'; log.appendChild(d); log.scrollTop=log.scrollHeight; i++;
+    if(i>=BMSGS.length){
+      clearInterval(iv);
+      setTimeout(()=>{ document.getElementById('boot').style.display='none'; initMatrix(); },280);
+    }
+  },160);
+})();
+
+// ═══════════════════════════════════════════
+//  LOGIN MATRIX (light colour particles)
+// ═══════════════════════════════════════════
+function initMatrix(){
+  const c=document.getElementById('login-canvas'),ctx=c.getContext('2d');
+  c.width=window.innerWidth; c.height=window.innerHeight;
+  const cols=Math.floor(c.width/18), drops=Array(cols).fill(1);
+  const chars='0123456789ABCDEF!@#$%^&*<>{}[]'.split('');
+  setInterval(()=>{
+    ctx.fillStyle='rgba(240,244,255,0.06)'; ctx.fillRect(0,0,c.width,c.height);
+    ctx.font='12px Share Tech Mono';
+    drops.forEach((y,i)=>{
+      ctx.fillStyle=Math.random()>.95?'#4361ee':'rgba(67,97,238,0.3)';
+      ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*18,y*18);
+      if(y*18>c.height&&Math.random()>.975)drops[i]=0; drops[i]++;
+    });
+  },50);
+}
+
+// ═══════════════════════════════════════════
+//  AUTH — LOGIN + REGISTER
+// ═══════════════════════════════════════════
+const UKEY='hids_users';
+function getUsers(){ try{return JSON.parse(localStorage.getItem(UKEY)||'[]');}catch(e){return [];}}
+function saveUsers(u){ localStorage.setItem(UKEY,JSON.stringify(u)); updateMiniStats(); }
+function initUsers(){
+  if(getUsers().length===0){
+    saveUsers([{id:1,name:'Administrator',email:'admin@hids.local',
+                username:'admin',password:'admin',role:'admin',
+                created:new Date().toISOString()}]);
+  }
+}
+function updateMiniStats(){
+  const u=getUsers();
+  const ms=document.getElementById('ms-users'); if(ms) ms.textContent=u.length;
+}
+setInterval(()=>{ const el=document.getElementById('onl-cnt'); if(el) el.textContent=Math.floor(Math.random()*4)+1; },5000);
+
+function authTab(tab){
+  const loginDiv=document.getElementById('auth-login');
+  const regDiv=document.getElementById('auth-reg');
+  if(loginDiv) loginDiv.classList.toggle('show',tab==='login');
+  if(regDiv)   regDiv.classList.toggle('show',tab==='register');
+  const tl=document.getElementById('tab-login'),tr=document.getElementById('tab-reg');
+  if(tl) tl.classList.toggle('active',tab==='login');
+  if(tr) tr.classList.toggle('active',tab==='register');
+  ['lerr','lok','rerr','rok'].forEach(id=>{ const e=document.getElementById(id); if(e) e.classList.remove('show'); });
+}
+
+let selRole='admin';
+function vf(input,type){
+  input.classList.remove('err','ok');
+  const v=input.value.trim(); let ok=false;
+  if(type==='name')    ok=v.length>=2;
+  if(type==='email')   ok=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  if(type==='uname')   ok=v.length>=3&&/^[a-zA-Z0-9_]+$/.test(v);
+  if(type==='confirm') ok=v===document.getElementById('rpass').value&&v.length>0;
+  if(v.length>0) input.classList.add(ok?'ok':'err');
+}
+function pickRole(role,el){
+  selRole=role;
+  document.querySelectorAll('.rpill').forEach(r=>r.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function showStr(v){
+  const fill=document.getElementById('str-fill'),lbl=document.getElementById('str-lbl');
+  if(!fill||!lbl)return;
+  if(!v){fill.style.width='0%';lbl.textContent='—';return;}
+  let s=0;
+  if(v.length>=6)s++;if(v.length>=10)s++;
+  if(/[A-Z]/.test(v))s++;if(/[0-9]/.test(v))s++;if(/[^A-Za-z0-9]/.test(v))s++;
+  const lvl=[{w:'20%',c:'#ef233c',l:'Weak'},{w:'40%',c:'#fb8500',l:'Fair'},
+             {w:'60%',c:'#f4a261',l:'Good'},{w:'80%',c:'#06d6a0',l:'Strong'},
+             {w:'100%',c:'#4361ee',l:'Very Strong'}];
+  const lv=lvl[Math.min(s-1,4)]||lvl[0];
+  fill.style.width=lv.w; fill.style.background=lv.c;
+  lbl.textContent=lv.l; lbl.style.color=lv.c;
+}
+function showA(id,msg=''){
+  ['lerr','lok','rerr','rok'].forEach(i=>{ const e=document.getElementById(i); if(e) e.classList.remove('show'); });
+  const el=document.getElementById(id); if(!el)return;
+  if(msg){ const m=id==='lerr'?document.getElementById('lerr-msg'):id==='rerr'?document.getElementById('rerr-msg'):null; if(m) m.textContent=msg; }
+  el.classList.add('show');
+}
+
+function doLogin(){
+  const u=document.getElementById('lu').value.trim(), p=document.getElementById('lp').value.trim();
+  if(!u||!p){ showA('lerr','Enter username and password'); return; }
+  const spin=document.getElementById('login-spin'); if(spin) spin.classList.add('show');
+  setTimeout(()=>{
+    if(spin) spin.classList.remove('show');
+    const users=getUsers();
+    const user=users.find(x=>(x.username===u||x.email===u)&&x.password===p);
+    if(user){
+      sessionStorage.setItem('hids_session',JSON.stringify(user));
+      showA('lok');
+      setTimeout(()=>{
+        document.getElementById('login-page').style.display='none';
+        document.getElementById('app').style.display='block';
+        const un=document.getElementById('uname'), av=document.getElementById('av-letter');
+        if(un) un.textContent=user.name||user.username;
+        if(av) av.textContent=(user.username||'A')[0].toUpperCase();
+        initApp();
+        toast(`Welcome, ${user.name||user.username}! Role: ${user.role}`,'ACCESS GRANTED','success');
+        renderUsersList();
+      },700);
+    } else {
+      showA('lerr','Wrong username or password. Default: admin / admin');
+    }
+  },600);
+}
+
+function doRegister(){
+  const name=document.getElementById('rname').value.trim();
+  const email=document.getElementById('remail').value.trim();
+  const uname=document.getElementById('runame').value.trim();
+  const pass=document.getElementById('rpass').value;
+  const pass2=document.getElementById('rpass2').value;
+  if(!name||name.length<2)    { showA('rerr','Name must be at least 2 characters'); return; }
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showA('rerr','Enter a valid email'); return; }
+  if(!uname||uname.length<3)  { showA('rerr','Username must be at least 3 characters'); return; }
+  if(!pass||pass.length<4)    { showA('rerr','Password must be at least 4 characters'); return; }
+  if(pass!==pass2)            { showA('rerr','Passwords do not match'); return; }
+  const users=getUsers();
+  if(users.find(u=>u.username===uname)){ showA('rerr','Username already taken. Choose another.'); return; }
+  if(users.find(u=>u.email===email))   { showA('rerr','Email already registered. Please login.'); return; }
+  const spin=document.getElementById('reg-spin'); if(spin) spin.classList.add('show');
+  setTimeout(()=>{
+    if(spin) spin.classList.remove('show');
+    users.push({id:Date.now(),name,email,username:uname,password:pass,role:selRole,created:new Date().toISOString()});
+    saveUsers(users);
+    showA('rok');
+    ['rname','remail','runame','rpass','rpass2'].forEach(id=>{ const el=document.getElementById(id); if(el){el.value='';el.classList.remove('err','ok');} });
+    setTimeout(()=>{ document.getElementById('lu').value=uname; authTab('login'); },1500);
+  },700);
+}
+
+function renderUsersList(){
+  const el=document.getElementById('users-list'); if(!el)return;
+  const users=getUsers();
+  el.innerHTML=users.map(u=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span>${u.username}</span><span style="color:var(--text3)">${u.role}</span><span style="color:var(--text3)">${new Date(u.created).toLocaleDateString()}</span></div>`).join('');
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    const lp=document.getElementById('login-page');
+    if(lp&&lp.style.display!=='none'){
+      const isLogin=document.getElementById('auth-login').classList.contains('show');
+      if(isLogin) doLogin(); else doRegister();
+    }
+  }
+});
+
+function logout(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-page').style.display='flex';
+  document.getElementById('lu').value=''; document.getElementById('lp').value='';
+  if(S.ws)S.ws.close(); setWS('disconnected');
+  Object.values(S.charts).forEach(c=>{try{c.destroy();}catch(e){}});
+  S.charts={}; authTab('login');
+}
+
+initUsers(); updateMiniStats();
+
+// ═══════════════════════════════════════════
+//  PORT SCAN PASSWORD PROTECTION
+// ═══════════════════════════════════════════
+function openPortScanAuth(idx,key){
+  S.pendingPortScanIdx=idx; S.pendingPortScanKey=key;
+  document.getElementById('ps-pass').value='';
+  document.getElementById('ps-confirm').value='';
+  document.getElementById('ps-err').classList.remove('show');
+  document.getElementById('portscan-modal').classList.add('show');
+}
+
+function confirmPortScan(){
+  const pass=document.getElementById('ps-pass').value;
+  const confirm=document.getElementById('ps-confirm').value;
+  const session=JSON.parse(sessionStorage.getItem('hids_session')||'{}');
+  const users=getUsers();
+  const user=users.find(u=>u.username===session.username&&u.password===pass);
+
+  if(!pass){ showPsErr('Enter your password'); return; }
+  if(!user){ showPsErr('Wrong password. Try again.'); return; }
+  if(confirm!=='yes'){ showPsErr('Please select confirmation from dropdown'); return; }
+
+  closeModal('portscan-modal');
+  toast('Port scan authorized by '+session.username,'AUTHORIZED','success');
+  launchAtkDirect(S.pendingPortScanIdx, S.pendingPortScanKey);
+}
+
+function showPsErr(msg){
+  const e=document.getElementById('ps-err'), m=document.getElementById('ps-err-msg');
+  if(m) m.textContent=msg; if(e) e.classList.add('show');
+}
+
+// ═══════════════════════════════════════════
+//  INIT APP
+// ═══════════════════════════════════════════
+function initApp(){
+  startClock(); buildAtkGrid(); renderRules(); initCharts(); connectWS();
+}
+function startClock(){
+  setInterval(()=>{
+    const n=new Date();
+    document.getElementById('clk').textContent=n.toLocaleTimeString('en-US',{hour12:false});
+    document.getElementById('dtt').textContent=n.toLocaleDateString('en-US',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  },1000);
+}
+
+// ═══════════════════════════════════════════
+//  WEBSOCKET
+// ═══════════════════════════════════════════
+function connectWS(){
+  setWS('connecting');
+  const url=document.getElementById('cfg-ws')?.value||S.wsUrl;
+  try{
+    S.ws=new WebSocket(url);
+    S.ws.onopen=()=>{ setWS('connected'); S.connected=true; document.getElementById('cfg-ws-st').textContent='Connected'; document.getElementById('cfg-ws-st').style.color='var(--green)'; toast('Backend connected — real-time data streaming','CONNECTED','success'); S.ws.send(JSON.stringify({type:'get_state'})); };
+    S.ws.onclose=()=>{ setWS('disconnected'); S.connected=false; setTimeout(connectWS,5000); };
+    S.ws.onerror=()=>{ setWS('disconnected'); S.connected=false; };
+    S.ws.onmessage=onMsg;
+  }catch(e){ setWS('disconnected'); setTimeout(connectWS,5000); }
+}
+function reconnectWS(){ if(S.ws)S.ws.close(); else connectWS(); }
+function requestState(){ if(S.ws&&S.connected)S.ws.send(JSON.stringify({type:'get_state'})); }
+function setWS(state){
+  const el=document.getElementById('wss'); el.className=state;
+  const labels={connected:'⬤ BACKEND LIVE — REAL DATA',disconnected:'⬤ BACKEND OFFLINE',connecting:'⬤ CONNECTING...'};
+  el.textContent=labels[state]||state;
+}
+
+function onMsg(ev){
+  let d; try{d=JSON.parse(ev.data);}catch(e){return;}
+  const t=d.type;
+  if(t==='full_state'||t==='update'){
+    if(d.metrics)    applyMetrics(d.metrics);
+    if(d.net_delta)  applyNetDelta(d.net_delta);
+    if(d.net_history){ S.netH=d.net_history; updateNetCharts(); }
+    if(d.processes)  { S.procs=d.processes; renderProcs(); }
+    if(d.connections){ S.conns=d.connections; renderConns(); }
+    if(d.alerts){
+      const prev=S.alerts.filter(a=>a.status==='new').length;
+      S.alerts=d.alerts; renderAllAlerts(); renderDashAlerts();
+      const newN=S.alerts.filter(a=>a.status==='new').length;
+      if(newN>prev&&S.prevAlertCount>0){ const a=S.alerts[0]; toast(`${a.type} from ${a.ip}`,'🚨 NEW ALERT',a.sev||'high'); }
+      S.prevAlertCount=newN;
+    }
+    if(d.logs)        { S.logs=d.logs; renderLogs(); updateLoginAnalysis(); }
+    if(d.blocked_ips) { S.blocked=d.blocked_ips; renderBlocked(); }
+    if(d.alert_counts)  applyAlertCounts(d.alert_counts);
+    setText('lupd',new Date().toLocaleTimeString());
+    setText('cfg-uptime',d.metrics?fmtUptime(d.metrics.uptime_seconds||0):'--');
+    // show attacker IPs in connections page
+    if(d.connections){
+      const external=d.connections.filter(c=>c.remote_ip&&!c.remote_ip.startsWith('127')&&!c.remote_ip.startsWith('::'));
+      const badge=document.getElementById('conn-ip-badge');
+      if(badge&&external.length>0) badge.textContent=`${external.length} EXTERNAL IPs`;
+    }
+  }
+  else if(t==='sim_log'){ appendSimLog(d.msg,d.lvl); }
+  else if(t==='sim_done'){ toast(`Simulation done — alert #${d.alert?.id} created`,'SIM COMPLETE','warning'); }
+  else if(t==='blocked'){ toast(`IP ${d.ip} blocked`,'BLOCKED','warning'); }
+  else if(t==='unblocked'){ toast(`IP ${d.ip} unblocked`,'UNBLOCKED','info'); }
+  else if(t==='proc_killed'){ toast(`PID ${d.pid} terminated`,'KILLED','success'); }
+  else if(t==='error'){ toast(d.msg,'ERROR','high'); }
+}
+
+// ═══════════════════════════════════════════
+//  METRICS
+// ═══════════════════════════════════════════
+function setText(id,v){ const e=document.getElementById(id); if(e)e.textContent=v; }
+function setWidth(id,pct){ const e=document.getElementById(id); if(e)e.style.width=Math.min(pct,100)+'%'; }
+function fmtB(b){ if(b<1024)return b+'B'; if(b<1048576)return (b/1024).toFixed(1)+'KB'; return (b/1048576).toFixed(1)+'MB'; }
+function fmtUptime(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return `${h}h ${m}m`; }
+
+function applyMetrics(m){
+  const cpu=m.cpu?.percent||0,mem=m.memory?.percent||0,dsk=m.disk?.percent||0;
+  setText('sc-cpu',cpu.toFixed(0)+'%'); setText('sc-cpu2',`${m.cpu?.count||0} cores @ ${((m.cpu?.freq_mhz||0)/1000).toFixed(2)}GHz`);
+  setText('sc-mem',mem.toFixed(0)+'%'); setText('sc-mem2',`${m.memory?.used_gb||0}/${m.memory?.total_gb||0}GB`);
+  setText('sc-disk',dsk.toFixed(0)+'%'); setText('sc-disk2',`${m.disk?.used_gb||0}/${m.disk?.total_gb||0}GB`);
+  setText('db-cpu-lbl',cpu.toFixed(0)+'%'); setWidth('db-cpu-bar',cpu);
+  setText('db-mem-lbl',mem.toFixed(0)+'%'); setWidth('db-mem-bar',mem);
+  setText('db-dsk-lbl',dsk.toFixed(0)+'%'); setWidth('db-dsk-bar',dsk);
+  setText('db-host',m.hostname||'--'); setText('db-plat',`${m.platform||'--'} ${m.arch||''}`);
+  setText('db-upt',fmtUptime(m.uptime_seconds||0));
+  drawGauge('gauCPU',cpu,'#4361ee'); drawGauge('gauMEM',mem,'#7209b7'); drawGauge('gauDSK',dsk,'#06d6a0');
+  setText('rt-cpu',cpu.toFixed(1)+'%'); setText('rt-mem',mem.toFixed(1)+'%'); setText('rt-dsk',dsk.toFixed(1)+'%');
+  setText('rt-cpu2',`${m.cpu?.count||0} cores @ ${m.cpu?.freq_mhz||0} MHz`);
+  setText('rt-mem2',`${m.memory?.used_gb||0} / ${m.memory?.total_gb||0} GB`);
+  setText('rt-dsk2',`${m.disk?.used_gb||0} / ${m.disk?.total_gb||0} GB`);
+  setText('rt-tr',fmtB(m.network?.bytes_recv||0)); setText('rt-ts',fmtB(m.network?.bytes_sent||0));
+  setText('rt-ei',(m.network?.errin||0)+(m.network?.errout||0));
+  renderCores(m.cpu?.per_core||[]);
+  const iftb=document.getElementById('rt-ifaces');
+  if(iftb&&m.network?.interfaces) iftb.innerHTML=Object.entries(m.network.interfaces).map(([k,v])=>`<tr><td style="color:var(--accent)">${k}</td><td><span style="color:${v.up?'var(--green)':'var(--red)'}">${v.up?'● UP':'○ DOWN'}</span></td><td style="color:var(--text3)">${v.speed} Mbps</td></tr>`).join('');
+  const badge=document.getElementById('thlvl'), txt=document.getElementById('thtxt');
+  const crit=S.alerts.filter(a=>a.sev==='critical'&&a.status==='new').length;
+  if(cpu>80||crit>0){badge.className='thlvl critical';txt.textContent='CRITICAL';}
+  else if(cpu>60||S.alerts.filter(a=>a.sev==='high'&&a.status==='new').length>0){badge.className='thlvl high';txt.textContent='HIGH';}
+  else if(cpu>40){badge.className='thlvl medium';txt.textContent='MEDIUM';}
+  else{badge.className='thlvl low';txt.textContent='LOW';}
+}
+
+function renderCores(cores){
+  const g=document.getElementById('cores-grid'); if(!g)return;
+  g.innerHTML=cores.slice(0,16).map((v,i)=>{
+    const color=v>80?'var(--red)':v>50?'var(--orange)':'var(--accent)';
+    return `<div class="core-bar"><div class="core-fill" style="height:${v}%;background:${color}"></div><div class="core-lbl">C${i}</div></div>`;
+  }).join('');
+}
+
+function applyNetDelta(d){
+  const bi=(d.bytes_in/1024).toFixed(1),bo=(d.bytes_out/1024).toFixed(1);
+  const pi=d.pkts_in,po=d.pkts_out;
+  setText('sc-netin',bi+' KB/s'); setText('sc-netout','Out: '+bo+' KB/s');
+  setText('db-ni',bi+' KB/s'); setText('db-no',bo+' KB/s');
+  setText('rt-pi',pi); setWidth('rt-pi-b',Math.min(pi/500*100,100));
+  setText('rt-po',po); setWidth('rt-po-b',Math.min(po/500*100,100));
+  const maxB=Math.max(d.bytes_in,d.bytes_out,1);
+  setText('rt-bi',bi+' KB/s'); setWidth('rt-bi-b',d.bytes_in/maxB*100);
+  setText('rt-bo',bo+' KB/s'); setWidth('rt-bo-b',d.bytes_out/maxB*100);
+  setText('net-pi',pi); setText('net-po',po);
+  setText('net-bi',bi+' KB/s'); setText('net-bo',bo+' KB/s');
+}
+
+// ═══════════════════════════════════════════
+//  ALERTS
+// ═══════════════════════════════════════════
+function renderDashAlerts(){
+  const tb=document.getElementById('db-alerts'); if(!tb)return;
+  tb.innerHTML=S.alerts.slice(0,10).map((a,i)=>`<tr ${i===0?'class="flash"':''}><td style="color:var(--text3)">${a.time}</td><td>${esc(a.type)}</td><td style="color:var(--accent);font-weight:700">${esc(a.ip)}</td><td style="color:var(--text3);font-size:8px">${esc(a.target||'—')}</td><td><span class="badge ${a.sev}">${(a.sev||'').toUpperCase()}</span></td><td><span class="badge ${a.status}">${(a.status||'').toUpperCase()}</span></td><td style="font-size:8px;color:var(--text3);max-width:100px">${esc(a.detail||'—')}</td><td><button class="btn bg2 bsm" onclick="ackAlert(${a.id})">ACK</button></td></tr>`).join('');
+}
+function renderAllAlerts(){
+  const tb=document.getElementById('all-alerts'); if(!tb)return;
+  tb.innerHTML=S.alerts.map((a,i)=>`<tr ${i===0&&S.prevAlertCount>0?'class="flash"':''}><td style="color:var(--text3)">${a.id}</td><td style="color:var(--text3)">${a.time}</td><td>${esc(a.type)}</td><td style="color:var(--accent);font-weight:700">${esc(a.ip)}</td><td style="font-size:8px;color:var(--text3)">${esc(a.target||'—')}</td><td><span class="badge ${a.sev}">${(a.sev||'').toUpperCase()}</span></td><td><span class="badge ${a.status}">${(a.status||'').toUpperCase()}</span></td><td style="font-size:8px;color:var(--text3)">${esc(a.detail||'—')}</td><td><button class="btn bg2 bsm" onclick="ackAlert(${a.id})">ACK</button></td></tr>`).join('');
+}
+function ackAlert(id){ if(S.ws&&S.connected)S.ws.send(JSON.stringify({type:'ack_alert',id})); const a=S.alerts.find(x=>x.id===id); if(a){a.status='acknowledged';renderAllAlerts();renderDashAlerts();} }
+function clearAlerts(){ if(S.ws&&S.connected)S.ws.send(JSON.stringify({type:'clear_alerts'})); S.alerts=[]; renderAllAlerts(); renderDashAlerts(); applyAlertCounts({critical:0,high:0,medium:0,low:0,total:0,new:0}); }
+function exportAlerts(){
+  const csv=['ID,Time,Type,IP,Target,Severity,Status,Detail',...S.alerts.map(a=>`${a.id},${a.time},"${a.type}",${a.ip},${a.target||''},${a.sev},${a.status},"${a.detail||''}"`)].join('\n');
+  const b=new Blob([csv],{type:'text/csv'}); const u=URL.createObjectURL(b);
+  const l=document.createElement('a'); l.href=u; l.download=`HIDS_Alerts_${Date.now()}.csv`; l.click();
+  toast(`Exported ${S.alerts.length} alerts to CSV`,'EXPORT','success');
+}
+function applyAlertCounts(c){
+  setText('ac-c',c.critical||0); setText('ac-h',c.high||0); setText('ac-m',c.medium||0); setText('ac-l',c.low||0);
+  setText('sc-alerts',c.total||0); setText('sc-anew',(c.new||0)+' new');
+  setText('nb-a',c.new||0); setText('nc',c.new||0);
+}
+
+// ═══════════════════════════════════════════
+//  PROCESSES + CONNECTIONS
+// ═══════════════════════════════════════════
+function renderProcs(){
+  const tb=document.getElementById('proc-list'); if(!tb)return;
+  tb.innerHTML=S.procs.map(p=>`<tr><td style="color:var(--text3)">${p.pid}</td><td style="color:${p.threat!=='none'?'var(--red)':'var(--text)'};font-weight:${p.threat!=='none'?700:400}">${esc(p.name)}${p.threat!=='none'?' ⚠️':''}</td><td><span style="color:${p.cpu>50?'var(--red)':p.cpu>20?'var(--orange)':'var(--green)'}">${p.cpu}%</span></td><td>${p.mem}%</td><td style="color:var(--text3);font-size:8px">${esc(p.user||'?')}</td><td style="color:var(--text2)">${p.status}</td><td>${p.threat!=='none'?`<span class="badge ${p.threat}">${p.threat.toUpperCase()}</span>`:'<span style="color:var(--text3)">none</span>'}</td><td>${p.threat!=='none'?`<button class="btn bd bsm" onclick="killProc(${p.pid},'${esc(p.name)}')">⛔ Kill</button>`:'—'}</td></tr>`).join('');
+}
+function killProc(pid,name){ if(!S.ws||!S.connected){toast('Backend not connected','ERROR','high');return;} if(confirm(`Kill ${name} [PID:${pid}]?`)) S.ws.send(JSON.stringify({type:'kill_process',pid})); }
+
+function renderConns(){
+  const tb=document.getElementById('conn-list'); if(!tb)return;
+  tb.innerHTML=S.conns.map(c=>`<tr><td style="color:var(--text3)">${esc(c.laddr)}</td><td style="color:${c.threat!=='none'?'var(--red)':'var(--accent)'};font-weight:${c.threat!=='none'?700:400}">${esc(c.raddr)}</td><td style="color:${c.status==='ESTABLISHED'?'var(--green)':'var(--text3)'}">${c.status}</td><td style="color:var(--text3)">${c.pid||'?'}</td><td>${c.threat!=='none'?`<span class="badge ${c.threat}">${c.threat.toUpperCase()}</span>`:'<span style="color:var(--text3)">none</span>'}</td><td>${c.remote_ip?`<button class="btn bd bsm" onclick="blockConnIP('${esc(c.remote_ip)}')">🚫 Block</button>`:'—'}</td></tr>`).join('');
+}
+function blockConnIP(ip){ if(S.ws&&S.connected) S.ws.send(JSON.stringify({type:'block_ip',ip,reason:'Suspicious Connection'})); toast(`Blocking ${ip}`,'BLOCK','warning'); }
+
+// ═══════════════════════════════════════════
+//  LOGS + LOGIN ANALYSIS
+// ═══════════════════════════════════════════
+function renderLogs(){
+  const el=document.getElementById('log-stream'); if(!el)return;
+  const filter=document.getElementById('log-filter')?.value||'all';
+  const filt=S.logs.filter(l=>{ if(filter==='all')return true; if(filter==='crit')return l.level==='crit'; if(filter==='error')return ['crit','error'].includes(l.level); if(filter==='warn')return ['crit','error','warn'].includes(l.level); return true; });
+  el.innerHTML=filt.map(l=>{ const cls={info:'li3',warn:'lw',error:'le2',crit:'lc2'}[l.level]||'li3'; return `<div class="le"><span class="lt">[${l.time}]</span> <span class="${cls}">${esc(l.msg)}</span></div>`; }).join('');
+}
+function clrLogs(){ S.logs=[]; const el=document.getElementById('log-stream'); if(el)el.innerHTML=''; }
+function filterLogs(){ renderLogs(); }
+
+function updateLoginAnalysis(){
+  const failMap={};
+  S.alerts.filter(a=>a.type.toLowerCase().includes('login')||a.type.toLowerCase().includes('ssh')).forEach(a=>{ if(!failMap[a.ip])failMap[a.ip]={ip:a.ip,count:0,last:a.time,status:a.sev==='critical'?'blocked':'watching'}; failMap[a.ip].count++; failMap[a.ip].last=a.time; });
+  const tb=document.getElementById('la-tbody');
+  if(tb) tb.innerHTML=Object.values(failMap).sort((a,b)=>b.count-a.count).slice(0,10).map(r=>`<tr><td style="color:var(--accent);font-weight:700">${esc(r.ip)}</td><td style="color:var(--red);font-weight:700">${r.count}</td><td style="color:var(--text3)">${r.last}</td><td><span class="badge ${r.status==='blocked'?'critical':'medium'}">${r.status.toUpperCase()}</span></td></tr>`).join('');
+  const lg=document.getElementById('la-log');
+  if(lg) lg.innerHTML=S.logs.filter(l=>l.msg.toLowerCase().includes('ssh')||l.msg.toLowerCase().includes('login')||l.msg.toLowerCase().includes('auth')).slice(0,50).map(l=>`<div class="le"><span class="lt">[${l.time}]</span> <span class="${l.level==='error'||l.level==='crit'?'le2':'li3'}">${esc(l.msg)}</span></div>`).join('');
+}
+
+// ═══════════════════════════════════════════
+//  IP BLOCKS
+// ═══════════════════════════════════════════
+function renderBlocked(){
+  const el=document.getElementById('ip-block-list'); if(!el)return;
+  setText('sc-blocked',S.blocked.length); setText('nb-b',S.blocked.length);
+  el.innerHTML=S.blocked.length===0?'<div style="padding:20px;text-align:center;font-family:var(--fm);font-size:10px;color:var(--text3)">No blocked IPs</div>':S.blocked.map(b=>`<div class="ipitem"><div class="ipdot ${b.auto?'blocked':'watching'}"></div><div class="ipaddr">${esc(b.ip)}</div><div class="ipreason">${esc(b.reason)} ${b.auto?'[AUTO]':'[MANUAL]'}</div><div class="iptime">${b.time||'--'}</div><button class="btn bg2 bsm" onclick="unblockIP('${esc(b.ip)}')">Unblock</button></div>`).join('');
+}
+function unblockIP(ip){ if(S.ws&&S.connected) S.ws.send(JSON.stringify({type:'unblock_ip',ip})); }
+function openBlockModal(){ document.getElementById('block-modal').classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function doBlock(){
+  const ip=document.getElementById('bk-ip').value.trim(), reason=document.getElementById('bk-reason').value;
+  if(!ip){toast('Enter an IP address','ERROR','high');return;}
+  if(S.ws&&S.connected) S.ws.send(JSON.stringify({type:'block_ip',ip,reason}));
+  else toast('Backend offline — cannot block','ERROR','high');
+  closeModal('block-modal');
+}
+
+// ═══════════════════════════════════════════
+//  RULES
+// ═══════════════════════════════════════════
+function renderRules(){
+  const tb=document.getElementById('rules-body'); if(!tb)return;
+  tb.innerHTML=RULES_DATA.map(r=>`<tr><td style="color:var(--accent)">${r.id}</td><td style="color:var(--text);font-weight:600">${r.name}</td><td style="color:var(--text3);font-size:8px">${r.cond}</td><td style="color:var(--orange)">${r.action}</td><td><span class="badge ${r.pri}">${r.pri.toUpperCase()}</span></td><td><span style="color:${r.on?'var(--green)':'var(--text3)'}">● ${r.on?'ON':'OFF'}</span></td></tr>`).join('');
+}
+
+// ═══════════════════════════════════════════
+//  ATTACK SIMULATION
+// ═══════════════════════════════════════════
+function buildAtkGrid(){
+  const g=document.getElementById('agrid'); if(!g)return;
+  g.innerHTML=ATTACKS.map((a,i)=>`<div class="acard" id="ac-${i}"><span class="aico">${a.ico}</span><div class="atitle">${a.title}</div><div class="adesc">${a.desc}</div><div class="aprog" id="ap-${i}"><div class="aprogf" id="apf-${i}"></div></div><button class="abtn" onclick="launchAtk(${i},'${a.key}','${a.title}')">⚡ LAUNCH</button></div>`).join('');
+}
+
+function launchAtk(idx,key,title){
+  // Port scan requires password
+  const atk=ATTACKS[idx];
+  if(atk&&atk.needsAuth){
+    openPortScanAuth(idx,key);
+    return;
+  }
+  launchAtkDirect(idx,key);
+}
+
+function launchAtkDirect(idx,key){
+  const src=document.getElementById('sim-src')?.value||'203.5.113.10';
+  const tgt=document.getElementById('sim-tgt')?.value||'192.168.1.100';
+  const intensity=document.getElementById('sim-int')?.value||'Medium';
+  const cnt=parseInt(document.getElementById('sim-cnt')?.value||'1');
+  const card=document.getElementById('ac-'+idx);
+  const prog=document.getElementById('ap-'+idx);
+  const fill=document.getElementById('apf-'+idx);
+  if(card.classList.contains('running'))return;
+  card.classList.add('running'); prog.classList.add('show');
+  let pct=0;
+  const iv=setInterval(()=>{ pct+=Math.random()*6+2; fill.style.width=Math.min(pct,100)+'%'; if(pct>=100){clearInterval(iv);card.classList.remove('running');fill.style.width='0%';prog.classList.remove('show');} },200);
+  appendSimLog(`[${new Date().toLocaleTimeString()}] [LAUNCH] ${ATTACKS[idx]?.title||key} x${cnt} — ${src} → ${tgt} [${intensity}]`,'warn');
+  if(S.ws&&S.connected){ for(let i=0;i<cnt;i++) setTimeout(()=>S.ws.send(JSON.stringify({type:'simulate',attack:key,src,tgt,intensity})),i*500); }
+  else { toast('Backend offline — start server first','OFFLINE','high'); appendSimLog('[ERROR] Backend not connected','error'); }
+}
+
+function appendSimLog(msg,lvl='info'){
+  const el=document.getElementById('sim-out'); if(!el)return;
+  const d=document.createElement('div'); d.className='le';
+  const cls={error:'le2',warn:'lw',info:'li3',crit:'lc2'}[lvl]||'li3';
+  d.innerHTML=`<span class="${cls}">${esc(msg)}</span>`;
+  el.insertBefore(d,el.firstChild);
+}
+function clrSimLog(){ const el=document.getElementById('sim-out'); if(el)el.innerHTML=''; }
+
+// ═══════════════════════════════════════════
+//  CHARTS
+// ═══════════════════════════════════════════
+const COPTS={
+  responsive:true,maintainAspectRatio:false,animation:{duration:0},
+  plugins:{ legend:{display:true,labels:{color:'#444466',font:{family:'Share Tech Mono',size:9},boxWidth:10}}, tooltip:{backgroundColor:'#fff',titleColor:'#4361ee',bodyColor:'#444466',borderColor:'#d0d9ff',borderWidth:1} },
+  scales:{ x:{ticks:{color:'#888899',font:{family:'Share Tech Mono',size:7},maxTicksLimit:10},grid:{color:'rgba(67,97,238,0.06)'}}, y:{ticks:{color:'#888899',font:{family:'Share Tech Mono',size:7}},grid:{color:'rgba(67,97,238,0.06)'}} }
+};
+function mkLine(label,color){ return {label,data:[],borderColor:color,backgroundColor:color+'18',tension:.4,pointRadius:0,borderWidth:2}; }
+
+function initCharts(){
+  const bl=Array(40).fill(0),bll=Array(40).fill('');
+  const mk=(id,type,dsets,opts)=>{ const e=document.getElementById(id); if(!e)return null; return new Chart(e,{type,data:{labels:[...bll],datasets:dsets},options:{...COPTS,...opts,responsive:true,maintainAspectRatio:false}}); };
+  S.charts.traffic=mk('ch-traffic','line',[mkLine('In (KB/s)','#4361ee'),mkLine('Out (KB/s)','#ef233c')],{});
+  S.charts.live=mk('ch-live','line',[mkLine('In (KB/s)','#4361ee'),mkLine('Out (KB/s)','#ef233c')],{});
+  S.charts.nethist=mk('ch-nethist','bar',[{label:'In (KB/s)',data:[...bl],backgroundColor:'rgba(67,97,238,.3)',borderColor:'#4361ee',borderWidth:1},{label:'Out (KB/s)',data:[...bl],backgroundColor:'rgba(239,35,60,.25)',borderColor:'#ef233c',borderWidth:1}],{});
+  S.charts.pkthist=mk('ch-pkthist','bar',[{label:'Pkts In',data:[...bl],backgroundColor:'rgba(6,214,160,.3)',borderColor:'#06d6a0',borderWidth:1},{label:'Pkts Out',data:[...bl],backgroundColor:'rgba(114,9,183,.25)',borderColor:'#7209b7',borderWidth:1}],{});
+  S.charts.blocks=mk('ch-blocks','bar',[{label:'Blocks',data:[3,5,2,8,4,6,7,12,9,4],backgroundColor:'rgba(239,35,60,.3)',borderColor:'#ef233c',borderWidth:1}],{plugins:{...COPTS.plugins,legend:{display:false}}});
+  if(S.charts.blocks) S.charts.blocks.data.labels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun','Mon','Tue','Wed'];
+}
+
+function updateNetCharts(){
+  const h=S.netH, labels=h.map(p=>p.t), ins=h.map(p=>(p.in/1024).toFixed(1)), outs=h.map(p=>(p.out/1024).toFixed(1)), pis=h.map(p=>p.pi||0), pos=h.map(p=>p.po||0);
+  [S.charts.traffic,S.charts.live].forEach(c=>{ if(!c)return; c.data.labels=labels; c.data.datasets[0].data=ins; c.data.datasets[1].data=outs; c.update('none'); });
+  if(S.charts.nethist){ S.charts.nethist.data.labels=labels; S.charts.nethist.data.datasets[0].data=ins; S.charts.nethist.data.datasets[1].data=outs; S.charts.nethist.update('none'); }
+  if(S.charts.pkthist){ S.charts.pkthist.data.labels=labels; S.charts.pkthist.data.datasets[0].data=pis; S.charts.pkthist.data.datasets[1].data=pos; S.charts.pkthist.update('none'); }
+}
+
+// ═══════════════════════════════════════════
+//  GAUGES
+// ═══════════════════════════════════════════
+function drawGauge(id,pct,color){
+  const c=document.getElementById(id); if(!c)return;
+  const ctx=c.getContext('2d'), cx=70,cy=70,r=54;
+  ctx.clearRect(0,0,140,140);
+  ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI*.8,Math.PI*.8);
+  ctx.strokeStyle='rgba(67,97,238,0.08)'; ctx.lineWidth=10; ctx.lineCap='round'; ctx.stroke();
+  const end=-Math.PI*.8+(pct/100)*Math.PI*1.6;
+  const gc=pct>80?'#ef233c':pct>60?'#fb8500':color;
+  ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI*.8,end);
+  ctx.strokeStyle=gc; ctx.lineWidth=10; ctx.lineCap='round';
+  ctx.shadowBlur=16; ctx.shadowColor=gc; ctx.stroke(); ctx.shadowBlur=0;
+  ctx.fillStyle='#1a1a2e'; ctx.font='bold 16px Orbitron'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(pct.toFixed(0)+'%',cx,cy);
+}
+
+// ═══════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════
+function toast(msg,title='ALERT',type='high'){
+  const icons={critical:'🚨',high:'⚠️',medium:'🔶',success:'✅',info:'ℹ️',warning:'⚠️'};
+  const el=document.createElement('div'); el.className=`toast ${type}`;
+  el.innerHTML=`<span class="tI">${icons[type]||'🔔'}</span><div class="tB"><div class="tT">${esc(title)}</div><div class="tM">${esc(msg)}</div><div class="tTm">${new Date().toLocaleTimeString()}</div></div><button class="tX" onclick="rmToast(this.parentElement)">✕</button>`;
+  document.getElementById('toasts').prepend(el);
+  setTimeout(()=>rmToast(el),7000);
+}
+function rmToast(el){ if(!el?.parentElement)return; el.classList.add('out'); setTimeout(()=>el?.parentElement?.removeChild(el),240); }
+
+// ═══════════════════════════════════════════
+//  PAGE NAV
+// ═══════════════════════════════════════════
+function goPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg=document.getElementById('page-'+id); if(pg)pg.classList.add('active');
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+
+// ═══════════════════════════════════════════
+//  MISC
+// ═══════════════════════════════════════════
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function genReport(){
+  const lines=[`HIDS Security Report — ${new Date().toLocaleString()}`,`Total Alerts: ${S.alerts.length}`,`Critical: ${S.alerts.filter(a=>a.sev==='critical').length}`,`High: ${S.alerts.filter(a=>a.sev==='high').length}`,`Blocked IPs: ${S.blocked.length}`,`Processes: ${S.procs.length}`];
+  const b=new Blob([lines.join('\n')],{type:'text/plain'}); const u=URL.createObjectURL(b); const l=document.createElement('a'); l.href=u; l.download=`HIDS_Report_${Date.now()}.txt`; l.click();
+  toast('Report downloaded','REPORT','success');
+}
+function saveSettings(){ toast('Settings saved','SETTINGS','success'); renderUsersList(); }
+</script>
+</body>
+</html>
