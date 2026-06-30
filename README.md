@@ -35,3 +35,9 @@ scripts/
 - Threat intelligence integration
 - Real-time network packet analysis
 - Multi-factor authentication(MFA)
+
+### Author
+**Chaithra R**
+BCA Graduate 
+Aspiring Data Analyst | Cybersecurity Enthusiast | Web Development 
+GitHub: https://github.com/Chaithra102223
